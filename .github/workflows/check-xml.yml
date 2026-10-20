@@ -1,0 +1,13 @@
+name: check-xml
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update XML must pass tools/check_xml.py
+        run: python3 -I tools/check_xml.py
+      - name: Tests of the tools
+        run: python3 -I tests/test_release.py
