@@ -9,14 +9,14 @@
         <element>pkg_webgautomations</element>
         <type>package</type>
         <client>site</client>
-        <version>0.0.0</version>
+        <version>0.5.2</version>
         <maintainer>Marco Galassi (WebG)</maintainer>
         <maintainerurl>https://www.webg.it</maintainerurl>
         <infourl title="WebG Automations">https://www.webg.it</infourl>
         <downloads>
-            <downloadurl type="full" format="zip">https://updates.webg.it/webgautomations/0.0.0.zip</downloadurl>
+            <downloadurl type="full" format="zip">https://updates.webg.it/webgautomations/0.5.2.zip</downloadurl>
         </downloads>
-        <sha256>0000000000000000000000000000000000000000000000000000000000000000</sha256>
+        <sha256>ab38310fd2af0149b896e28467e84ff380bb28396d68f46405302bda4ce8653f</sha256>
         <tags>
             <tag>stable</tag>
         </tags>
