@@ -9,14 +9,14 @@
         <element>pkg_webgpay</element>
         <type>package</type>
         <client>site</client>
-        <version>0.0.0</version>
+        <version>0.4.8</version>
         <maintainer>Marco Galassi (WebG)</maintainer>
         <maintainerurl>https://www.webg.it</maintainerurl>
         <infourl title="WebG Pay">https://www.webg.it</infourl>
         <downloads>
-            <downloadurl type="full" format="zip">https://updates.webg.it/webgpay/0.0.0.zip</downloadurl>
+            <downloadurl type="full" format="zip">https://updates.webg.it/webgpay/0.4.8.zip</downloadurl>
         </downloads>
-        <sha256>0000000000000000000000000000000000000000000000000000000000000000</sha256>
+        <sha256>932ea1a395a9f13b0dd3d2e0bb9ea377b2d6705f1522415c8051cea9ebaafaa9</sha256>
         <tags>
             <tag>stable</tag>
         </tags>
