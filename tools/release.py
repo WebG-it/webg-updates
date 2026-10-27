@@ -60,7 +60,7 @@ def vtuple(v):
     return tuple(int(x) for x in v.split("."))
 
 
-def check_zip(path, slug):
+def check_zip(path, slug, free=False):
     p = PRODUCTS[slug]
     if not os.path.isfile(path):
         die("zip not found: " + path)
@@ -86,7 +86,7 @@ def check_zip(path, slug):
         die("the manifest says version %s, the file name says %s" % (mv.group(1) if mv else "none", version))
     if CHANNEL % slug not in manifest:
         die("the manifest does not declare the update server " + CHANNEL % slug)
-    if not re.search(r'<dlid\s+prefix="key="\s+suffix=""\s*/>', manifest):
+    if not free and not re.search(r'<dlid\s+prefix="key="\s+suffix=""\s*/>', manifest):
         die('the manifest has no <dlid prefix="key=" suffix=""/>: Joomla would not ask for the download key')
     return version
 
@@ -113,6 +113,7 @@ def main(argv=None):
     ap.add_argument("--notes", default="")
     ap.add_argument("--notes-file")
     ap.add_argument("--target", help="branch or commit of the private repo the tag points to (default: its default branch)")
+    ap.add_argument("--free", action="store_true", help="free period: the product is served without a key (the Worker has free:true), so the manifest need not ask for one")
     ap.add_argument("--dry-run", action="store_true", help="checks only, changes nothing")
     ap.add_argument("--push", action="store_true", help="push this repository after the commit")
     ap.add_argument("--xml-dir", default=ROOT, help="folder of the XML files (the tests use a copy)")
@@ -120,7 +121,7 @@ def main(argv=None):
 
     slug, p = a.product, PRODUCTS[a.product]
     xml_path = os.path.join(a.xml_dir, slug + ".xml")
-    version = check_zip(a.zip, slug)
+    version = check_zip(a.zip, slug, a.free)
     sha = sha256_of(a.zip)
     cur = current_version(xml_path)
     if vtuple(version) <= vtuple(cur):
