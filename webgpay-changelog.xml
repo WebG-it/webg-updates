@@ -4,6 +4,20 @@
     <changelog>
         <element>pkg_webgpay</element>
         <type>package</type>
+        <version>0.4.23</version>
+        <security></security>
+        <fix></fix>
+        <language></language>
+        <addition></addition>
+        <change>
+            <item><![CDATA[In fondo a tutte le pagine di WebG Pay nell'amministrazione (Ordini, Email inviate, Opzioni e i dettagli) compare una striscia con il nome a sinistra e, a destra, la versione installata e il copyright «WebG di Marco Galassi», con il collegamento al sito WebG che si apre in una nuova scheda. Così si sa subito quale versione c'è sul sito, senza andare in Sistema. Si legge bene anche con il tema scuro.]]></item>
+        </change>
+        <remove></remove>
+        <note></note>
+    </changelog>
+    <changelog>
+        <element>pkg_webgpay</element>
+        <type>package</type>
         <version>0.4.22</version>
         <security></security>
         <fix></fix>
