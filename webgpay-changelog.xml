@@ -4,6 +4,20 @@
     <changelog>
         <element>pkg_webgpay</element>
         <type>package</type>
+        <version>0.4.25</version>
+        <security></security>
+        <fix></fix>
+        <language></language>
+        <addition></addition>
+        <change>
+            <item><![CDATA[Prima, aprire la pagina «Pagamento non completato» annullava l'ordine della persona che stava pagando, anche se il link arrivava da un altro sito: l'ordine passava a non riuscito, il posto veniva liberato e partiva l'avviso di pagamento fallito, anche per un pagamento ritardato (bonifico, SEPA) già in attesa di conferma. Ora quella pagina mostra soltanto com'è l'ordine e non cambia più niente. Una persona che annulla da Stripe e torna indietro vede «Pagamento non completato, non è stato addebitato nulla» con il pulsante per tornare al corso, e può riprovare. Il posto che teneva si libera da solo quando finisce il tempo di blocco (30 minuti di serie, regolabili nelle Opzioni) o appena Stripe comunica che la sessione di pagamento è scaduta; un pagamento ritardato non si annulla mai da quella pagina. Se il pagamento era già stato fatto in un'altra scheda, la pagina lo dice come prima.]]></item>
+        </change>
+        <remove></remove>
+        <note></note>
+    </changelog>
+    <changelog>
+        <element>pkg_webgpay</element>
+        <type>package</type>
         <version>0.4.24</version>
         <security></security>
         <fix></fix>
