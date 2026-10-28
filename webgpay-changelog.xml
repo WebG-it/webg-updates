@@ -4,6 +4,20 @@
     <changelog>
         <element>pkg_webgpay</element>
         <type>package</type>
+        <version>0.4.21</version>
+        <security></security>
+        <fix></fix>
+        <language></language>
+        <addition></addition>
+        <change>
+            <item><![CDATA[Nell'elemento Corso non c'è più l'interruttore «Applica un prezzo scontato fino a una data». Lo sconto vale se il prezzo scontato è compilato ed è più basso del prezzo pieno. Con la data di fine vale fino a quel giorno e a quell'ora, poi torna il prezzo pieno; senza data vale sempre. Se non lo vuoi, lasci vuoto il prezzo scontato. Funziona anche quando prezzo e data arrivano dai campi personalizzati, in tutti i formati di data di Joomla (anche «29-10-2026 12:00:03»). Il builder avvisa quando lo sconto è ignorato: prezzo non inferiore al pieno, o data che non si legge. I layout salvati con l'interruttore continuano a funzionare: il valore viene ignorato. Attenzione: i corsi che avevano l'interruttore spento ma il prezzo scontato compilato ora applicano lo sconto.]]></item>
+        </change>
+        <remove></remove>
+        <note></note>
+    </changelog>
+    <changelog>
+        <element>pkg_webgpay</element>
+        <type>package</type>
         <version>0.4.20</version>
         <security></security>
         <fix></fix>
