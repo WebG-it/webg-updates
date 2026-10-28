@@ -21,6 +21,41 @@ SECRETISH = re.compile(r"(ghp_|github_pat_|wgk_[A-Za-z0-9_-]{20,}|key=|token|sec
 REQUIRED = ["name", "description", "element", "type", "client", "version", "downloads", "sha256", "targetplatform", "php_minimum"]
 
 
+CHANGELOG_URL = "https://raw.githubusercontent.com/WebG-it/webg-updates/main/%s-changelog.xml"
+TOKENISH = re.compile(r"(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|wgk_[A-Za-z0-9_-]{20,}|sk_live_[A-Za-z0-9]{10,}|-----BEGIN )")
+
+
+def check_changelog(path):
+    """<product>-changelog.xml: well-formed, one <changelog> per version with element, type and a version that is not repeated, nothing key-like in the text."""
+    slug = os.path.basename(path)[: -len("-changelog.xml")]
+    problems = []
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError as e:
+        return ["%s: not well-formed XML: %s" % (os.path.basename(path), e)]
+    if root.tag != "changelogs":
+        problems.append("root element must be <changelogs>")
+    seen = set()
+    for c in root.findall("changelog"):
+        v = (c.findtext("version") or "").strip()
+        if not re.fullmatch(r"\d+\.\d+\.\d+", v):
+            problems.append("bad <version> %r" % v)
+        if v in seen:
+            problems.append("version %s twice" % v)
+        seen.add(v)
+        if (c.findtext("element") or "").strip() != PRODUCTS.get(slug) or (c.findtext("type") or "").strip() != "package":
+            problems.append("version %s: <element> must be %s and <type> package" % (v, PRODUCTS.get(slug)))
+        if not [i for i in c.iter("item") if (i.text or "").strip()]:
+            problems.append("version %s has no text" % v)
+    if not seen:
+        problems.append("no <changelog> at all")
+    if TOKENISH.search(text):
+        problems.append("looks like a token or a key in the text")
+    return ["%s: %s" % (os.path.basename(path), p) for p in problems]
+
+
 def check(path):
     problems = []
     slug = os.path.splitext(os.path.basename(path))[0]
@@ -63,6 +98,8 @@ def check(path):
             problems.append("targetplatform must be joomla (5|6)\\.[0-9]+")
         if not re.fullmatch(r"\d+\.\d+", g("php_minimum")):
             problems.append("bad <php_minimum>")
+        if u.find("changelogurl") is not None and g("changelogurl") != CHANGELOG_URL % slug:
+            problems.append("<changelogurl> must be %s" % (CHANGELOG_URL % slug))
     # a comment may explain "?key=", the data may not carry anything key-like
     body = re.sub(r"<!--.*?-->", "", text, flags=re.S)
     m = SECRETISH.search(body)
@@ -78,6 +115,10 @@ def main(argv):
     bad = []
     for f in files:
         bad += check(f)
+    for slug in PRODUCTS:
+        c = os.path.join(ROOT, slug + "-changelog.xml")
+        if not argv and os.path.isfile(c):
+            bad += check_changelog(c)
     for b in bad:
         print("FAIL " + b)
     if not bad:

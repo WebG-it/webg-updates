@@ -22,6 +22,7 @@ download is refused with a clear message. The download address in the XML is `ht
 ```
 webgpay.xml, webgautomations.xml   the update XML, written by tools/release.py (version 0.0.0 = nothing published yet)
 tools/release.py                   publishes a version: private Release with the zip, then these XML (see its header)
+webgpay-changelog.xml               the changelog Joomla shows on the Update screen (public, no key), written by release.py from the "In breve" paragraphs of CHANGELOG.md
 tools/check_xml.py                 checks the XML (fields, download host must be updates.webg.it, sha256, no key-like value, no private address); run on every push by .github/workflows
 tests/                             tests of the two tools with a stand-in for gh:   python -I tests/test_release.py
 e2e/                               end-to-end test on a real Joomla 5 and 6 in Docker with a fake channel (t_update_channel.py)

@@ -2,12 +2,14 @@
 """Tests of tools/check_xml.py and tools/release.py with a stand-in `gh`.   python -I tests/test_release.py"""
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
+import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
@@ -18,6 +20,7 @@ GOOD = """<?xml version="1.0" encoding="utf-8"?>
 <extension type="package" method="upgrade">
     <name>WebG Pay</name>
     <version>%(v)s</version>
+    %(cl)s
     <updateservers>
         <server type="extension" name="WebG Pay">%(server)s</server>
     </updateservers>
@@ -26,11 +29,29 @@ GOOD = """<?xml version="1.0" encoding="utf-8"?>
 """
 SERVER = "https://raw.githubusercontent.com/WebG-it/webg-updates/main/webgpay.xml"
 DLID = '<dlid prefix="key=" suffix=""/>'
+CLURL = "<changelogurl>https://raw.githubusercontent.com/WebG-it/webg-updates/main/webgpay-changelog.xml</changelogurl>"
+MD = """# Changelog
+
+## 0.2.2 (28-10-2026), titolo
+
+**In breve, per chi usa il prodotto.** Ora il `passo 6` risulta **completato** dopo la prova, vedi [la guida](https://example.test/x) & basta.
+Seconda riga dello stesso paragrafo.
+
+- **Causa.** Dettaglio tecnico che non deve finire nel changelog di Joomla.
+
+## 0.2.1 (27-10-2026), vecchia
+
+**In breve.** Versione precedente <con> simboli.
+
+## 0.2.0 (26-10-2026), senza riassunto
+
+- Solo dettagli tecnici.
+"""
 
 
-def make_zip(path, v="0.2.2", server=SERVER, dlid=DLID, extra=None, mv=None):
+def make_zip(path, v="0.2.2", server=SERVER, dlid=DLID, extra=None, mv=None, cl=CLURL):
     with zipfile.ZipFile(path, "w") as z:
-        z.writestr("pkg_webgpay.xml", GOOD % {"v": mv or v, "server": server, "dlid": dlid})
+        z.writestr("pkg_webgpay.xml", GOOD % {"v": mv or v, "server": server, "dlid": dlid, "cl": cl})
         z.writestr("script.php", "<?php // nothing\n")
         for k, val in (extra or {}).items():
             z.writestr(k, val)
@@ -43,6 +64,21 @@ class T(unittest.TestCase):
         os.makedirs(self.xmls)
         for f in ("webgpay.xml", "webgautomations.xml"):
             shutil.copy(os.path.join(ROOT, f), self.xmls)
+        # the shipped XML says the version that is published today; the tests start from "nothing published yet", as the file did before the first release
+        for f, slug in (("webgpay.xml", "webgpay"), ("webgautomations.xml", "webgautomations")):
+            fp = os.path.join(self.xmls, f)
+            with open(fp, encoding="utf-8") as h:
+                t = h.read()
+            t = re.sub(r"<version>[^<]+</version>", "<version>0.0.0</version>", t, count=1)
+            t = re.sub(r"(https://updates\.webg\.it/%s/)[0-9.]+(\.zip)" % slug, r"\g<1>0.0.0\g<2>", t)
+            t = re.sub(r"<sha256>[^<]+</sha256>", "<sha256>" + "0" * 64 + "</sha256>", t, count=1)
+            with open(fp, "w", encoding="utf-8", newline="\n") as h:
+                h.write(t)
+        with open(os.path.join(self.xmls, "webgautomations.xml"), encoding="utf-8") as h:
+            self.auto_before = h.read()
+        self.md = os.path.join(self.td, "CHANGELOG.md")
+        with open(self.md, "w", encoding="utf-8") as h:
+            h.write(MD)
         self.gh = os.path.join(self.td, "gh")
         os.makedirs(self.gh)
         self.env = dict(os.environ, FAKE_GH_DIR=self.gh, WEBG_GH='"%s" -I "%s"' % (sys.executable, os.path.join(HERE, "fake_gh.py")))
@@ -51,6 +87,8 @@ class T(unittest.TestCase):
         shutil.rmtree(self.td, ignore_errors=True)
 
     def run_release(self, zippath, *extra, env=None):
+        if "--no-changelog" not in extra:
+            extra = ("--changelog", self.md, *extra)
         return subprocess.run([sys.executable, "-I", os.path.join(ROOT, "tools", "release.py"), "--product", "webgpay", "--zip", zippath,
                                "--xml-dir", self.xmls, *extra], capture_output=True, text=True, env=env or self.env)
 
@@ -80,8 +118,47 @@ class T(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self.gh, "v0.2.2", "pkg_webgpay-0.2.2.zip")))
         with open(os.path.join(self.gh, "calls.log")) as f:
             self.assertIn("--repo WebG-it/webgpay", f.read())
-        with open(os.path.join(self.xmls, "webgautomations.xml")) as a, open(os.path.join(ROOT, "webgautomations.xml")) as b:
-            self.assertEqual(a.read(), b.read())
+        with open(os.path.join(self.xmls, "webgautomations.xml"), encoding="utf-8") as a:
+            self.assertEqual(a.read(), self.auto_before)
+
+    def changelog(self):
+        with open(os.path.join(self.xmls, "webgpay-changelog.xml"), encoding="utf-8") as f:
+            return f.read()
+
+    def test_changelog_is_written_from_the_in_breve_paragraphs(self):
+        r = self.run_release(self.zip())
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("<changelogurl>https://raw.githubusercontent.com/WebG-it/webg-updates/main/webgpay-changelog.xml</changelogurl>", self.xml())
+        c = self.changelog()
+        root = ET.fromstring(c)
+        got = {e.findtext("version"): e for e in root.findall("changelog")}
+        self.assertEqual(sorted(got), ["0.2.1", "0.2.2"])                                          # 0.2.0 has no "In breve": left out
+        self.assertEqual([e.findtext("version") for e in root.findall("changelog")], ["0.2.2", "0.2.1"])
+        e = got["0.2.2"]
+        self.assertEqual(e.findtext("element"), "pkg_webgpay")
+        self.assertEqual(e.findtext("type"), "package")
+        self.assertEqual(e.findtext("change/item"), "Ora il passo 6 risulta completato dopo la prova, vedi la guida & basta. Seconda riga dello stesso paragrafo.")
+        self.assertNotIn("Dettaglio tecnico", c)
+        self.assertNotIn("**", c)
+        self.assertEqual(got["0.2.1"].findtext("change/item"), "Versione precedente <con> simboli.")  # characters are escaped by the writer, read back as they were
+        self.assertEqual(check_xml.check_changelog(os.path.join(self.xmls, "webgpay-changelog.xml")), [])
+        self.assertEqual(check_xml.check(os.path.join(self.xmls, "webgpay.xml")), [])
+        r2 = self.xml().count("<changelogurl>")
+        self.assertEqual(r2, 1)
+
+    def test_changelog_needs_the_paragraph_of_the_version_and_the_manifest_line(self):
+        before = self.xml()
+        with open(self.md, "w", encoding="utf-8") as h:
+            h.write(MD.replace("**In breve, per chi usa il prodotto.**", "**Niente.**"))
+        self.refuses(self.zip(), "no \"In breve\" paragraph for version 0.2.2")
+        with open(self.md, "w", encoding="utf-8") as h:
+            h.write(MD)
+        self.refuses(self.zip(cl=""), "does not declare <changelogurl>")
+        r = self.run_release(self.zip(cl=""), "--no-changelog")                                      # explicit choice: no file, no line
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("<changelogurl>", self.xml())
+        self.assertFalse(os.path.exists(os.path.join(self.xmls, "webgpay-changelog.xml")))
+        self.assertNotEqual(self.xml(), before)
 
     def test_dry_run_changes_nothing(self):
         before = self.xml()
