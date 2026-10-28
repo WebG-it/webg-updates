@@ -4,6 +4,20 @@
     <changelog>
         <element>pkg_webgpay</element>
         <type>package</type>
+        <version>0.4.24</version>
+        <security></security>
+        <fix></fix>
+        <language></language>
+        <addition></addition>
+        <change>
+            <item><![CDATA[Nell'amministrazione di WebG Pay il pulsante «Opzioni» ora sta tutto a destra della barra degli strumenti (in Ordini e in Email inviate), con «Esporta ordini» a sinistra. Dentro le Opzioni i permessi non sono più un pulsante: sono una seconda scheda, «Permessi», accanto a «Impostazioni». La scheda la vede e la salva solo chi può amministrare il componente (Super Utente); chi ha altri ruoli, compreso il gruppo «Cliente WebG Pay», non la vede e non può cambiare i permessi nemmeno con una richiesta costruita a mano. Salvare le impostazioni non tocca i permessi e salvare i permessi non tocca le impostazioni.]]></item>
+        </change>
+        <remove></remove>
+        <note></note>
+    </changelog>
+    <changelog>
+        <element>pkg_webgpay</element>
+        <type>package</type>
         <version>0.4.23</version>
         <security></security>
         <fix></fix>
