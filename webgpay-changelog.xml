@@ -4,6 +4,20 @@
     <changelog>
         <element>pkg_webgpay</element>
         <type>package</type>
+        <version>0.4.22</version>
+        <security></security>
+        <fix></fix>
+        <language></language>
+        <addition></addition>
+        <change>
+            <item><![CDATA[Le note che l'elemento Corso mostra solo a chi modifica (l'anteprima del builder, gli avvisi di configurazione, la riga di Turnstile, «Prova il pagamento», i messaggi del pannello) ora seguono la lingua dell'account collegato, non quella della pagina: un corso in inglese modificato da un'amministratrice italiana si spiega in italiano. Quello che vede chi compra (pulsanti, prezzi, note fattura e privacy, pagina fattura) resta nella lingua della pagina.]]></item>
+        </change>
+        <remove></remove>
+        <note></note>
+    </changelog>
+    <changelog>
+        <element>pkg_webgpay</element>
+        <type>package</type>
         <version>0.4.21</version>
         <security></security>
         <fix></fix>
