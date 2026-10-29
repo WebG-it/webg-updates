@@ -1,11 +1,13 @@
 # Il canale di aggiornamento dei prodotti a pagamento
 
-Vale per WebG Pay e WebG Automations. Chi acquista una licenza riceve da WebG una **chiave di download**: la scrive una volta in Joomla e da quel momento
+WebG Pay oggi e' gratuito: si aggiorna da *Sistema > Aggiorna* senza nessuna chiave, quello che segue non lo riguarda.
+
+Vale per WebG Automations. Chi acquista una licenza riceve da WebG una **chiave di download**: la scrive una volta in Joomla e da quel momento
 *Sistema > Aggiorna* trova e installa le nuove versioni.
 
 ## Dove si mette la chiave
 
-1. In Joomla vai su *Sistema > Siti di aggiornamento* e apri la riga *WebG Pay* (o *WebG Automations*).
+1. In Joomla vai su *Sistema > Siti di aggiornamento* e apri la riga *WebG Automations*.
 2. Incolla la chiave in *Chiave di download* e salva.
 3. Da *Sistema > Aggiorna > Estensioni* controlla gli aggiornamenti.
 

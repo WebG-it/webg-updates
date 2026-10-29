@@ -6,6 +6,11 @@ distributor that checks a download key; how it all works is in [docs/CANALE.md](
 
 The free extensions of WebG have their own repositories and update servers
 ([WebG-it/joomla-extensions](https://github.com/WebG-it/joomla-extensions)); this channel is only for the paid ones.
+**WebG Pay is free today**: it is still served from this channel, but its manifest has no `<dlid>` and the distributor hands it out without a key
+(`release.py --free`). What follows about the download key holds for WebG Automations.
+
+`release.py` refuses to publish a changelog that names a client (list in `tools/leak_words.txt` of the private product repository, never here) or
+carries characters of a Stripe key or webhook secret.
 
 | Extension | Package | Update server (Joomla reads it) |
 |---|---|---|

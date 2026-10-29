@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Publishes a version of a paid package: private GitHub Release with the zip, then the public update XML.
+"""Publishes a version of a package of this channel (WebG Pay is free today, see --free): private GitHub Release with the zip, then the public update XML.
 
   python -I tools/release.py --product webgpay --zip ../webgpay-git/dist/pkg_webgpay-0.2.2.zip [--notes "text" | --notes-file f]
-                             [--changelog CHANGELOG.md | --no-changelog] [--target main] [--dry-run] [--push]
+                             [--changelog CHANGELOG.md [--leak-words tools/leak_words.txt] | --no-changelog] [--target main] [--dry-run] [--push]
 
 What it does, in this order (it stops at the first problem, and the XML is touched LAST: it never announces a zip that is not there):
   1. checks the zip: the package manifest inside says the same version as the file name, declares THE update server of this channel
      and <dlid prefix="key=">, and nothing in the zip looks like a token or a key;
+  1b. checks the changelog that goes public: no name of the clients (the list is tools/leak_words.txt of the PRIVATE product repository, next to
+     its CHANGELOG.md, never in this public repository) and no Stripe key or webhook secret, whole or in part ("whsec_" followed by its last letters too);
   2. checks that the version is newer than the one in <product>.xml and that the Release does not exist yet (a Release is never overwritten);
   3. `gh release create v<version> <zip>` on the PRIVATE repo of the product (the gh of the PC: its token can write releases);
   4. downloads the asset back and compares its sha256 with the local zip;
@@ -24,6 +26,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import zipfile
 import xml.etree.ElementTree as ET
 
@@ -38,6 +41,9 @@ PRODUCTS = {
 CHANNEL = "https://raw.githubusercontent.com/WebG-it/webg-updates/main/%s.xml"
 CHANGELOG_URL = "https://raw.githubusercontent.com/WebG-it/webg-updates/main/%s-changelog.xml"   # public, read by Joomla with no key, next to <product>.xml
 WITH_CHANGELOG = ("webgpay",)                                                                    # the products whose repository keeps a CHANGELOG.md in the agreed format
+# the public changelog: a Stripe prefix (optionally live_/test_ and an ellipsis) followed by at least four letters or digits is a piece of a value;
+# the names of the settings (sk_live, whsec_test) and a bare prefix ("rk_live_", "whsec_…") are not
+STRIPE_PIECE = re.compile(r"\b(?:whsec|sk|rk|pk)_(?:(?:live|test)_)?(?:…|\.\.\.)?([A-Za-z0-9]{4,})")
 SECRETISH = re.compile(rb"(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|wgk_[A-Za-z0-9_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|sk_live_[A-Za-z0-9]{10,}|AKIA[0-9A-Z]{16})")
 
 
@@ -132,15 +138,42 @@ def changelog_xml(slug, entries):
     return "\n".join(lines) + "\n"
 
 
-def build_changelog(slug, md_path, version):
-    """The text of <product>-changelog.xml, or a stop when CHANGELOG.md has no "In breve" for the version that goes out."""
+def build_changelog(slug, md_path, version, words_path=None):
+    """The text of <product>-changelog.xml, or a stop when CHANGELOG.md has no "In breve" for the version that goes out or when a text would leak."""
     if not md_path or not os.path.isfile(md_path):
         die("CHANGELOG.md not found (%s): pass --changelog <file>, or --no-changelog to publish without one" % md_path)
     with open(md_path, encoding="utf-8") as f:
         entries = parse_changelog(f.read())
     if version not in [v for v, _ in entries]:
         die('CHANGELOG.md has no "In breve" paragraph for version %s: write it before the release' % version)
+    check_leaks(entries, load_leak_words(words_path or os.path.join(os.path.dirname(os.path.abspath(md_path)), "tools", "leak_words.txt")))
     return changelog_xml(slug, entries)
+
+
+def fold(text):
+    """Lower case without accents: «Pàola» and «PAOLA» are the same word."""
+    return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower()
+
+
+def load_leak_words(path):
+    """The client names of the product, as patterns: words of an entry may be written together or apart ("mario rossi" also stops "mariorossi.it")."""
+    if not path or not os.path.isfile(path):
+        die("the list of client names is not there (%s): it lives in the private product repository, tools/leak_words.txt next to CHANGELOG.md; "
+            "pass --leak-words <file>. Without it the changelog is not published" % path)
+    with open(path, encoding="utf-8") as f:
+        entries = [ln.strip() for ln in f if ln.strip() and not ln.lstrip().startswith("#")]
+    if not entries:
+        die("the list of client names %s is empty: the check would let everything through" % path)
+    return [re.compile(r"\b" + r"[\W_]*".join(re.escape(w) for w in fold(e).split()) + r"\b") for e in entries]
+
+
+def check_leaks(entries, words):
+    """Stops when the changelog that goes public names a client or carries characters of a secret. The message never repeats what it found."""
+    for v, text in entries:
+        if any(rx.search(fold(text)) for rx in words):
+            die("the changelog of version %s names a client (a name of the list of client names): rewrite it in general terms in CHANGELOG.md" % v)
+        if any(m.group(1).lower() not in ("live", "test") for m in STRIPE_PIECE.finditer(text)) or SECRETISH.search(text.encode("utf-8")):
+            die("the changelog of version %s carries characters of a key or a secret: write only the prefix (\"whsec_\") in CHANGELOG.md" % v)
 
 
 def write_xml(xml_path, slug, version, sha, changelog=False):
@@ -163,6 +196,7 @@ def main(argv=None):
     ap.add_argument("--notes-file")
     ap.add_argument("--target", help="branch or commit of the private repo the tag points to (default: its default branch)")
     ap.add_argument("--changelog", help="the CHANGELOG.md of the product (default: the one above the folder of the zip, ../CHANGELOG.md)")
+    ap.add_argument("--leak-words", help="the list of client names that must not appear in the changelog (default: tools/leak_words.txt next to the CHANGELOG.md)")
     ap.add_argument("--no-changelog", action="store_true", help="publish without the changelog file (Joomla then shows no changelog for this version)")
     ap.add_argument("--free", action="store_true", help="free period: the product is served without a key (the Worker has free:true), so the manifest need not ask for one")
     ap.add_argument("--dry-run", action="store_true", help="checks only, changes nothing")
@@ -185,8 +219,8 @@ def main(argv=None):
     print("OK   newer than %s; no Release %s yet on %s" % (cur, tag, p["repo"]))
     cl_text = None
     if with_cl:
-        cl_text = build_changelog(slug, a.changelog or os.path.join(os.path.dirname(os.path.abspath(a.zip)), "..", "CHANGELOG.md"), version)
-        print("OK   changelog of %s: %d version(s), the one that goes out included" % (slug, cl_text.count("<changelog>")))
+        cl_text = build_changelog(slug, a.changelog or os.path.join(os.path.dirname(os.path.abspath(a.zip)), "..", "CHANGELOG.md"), version, a.leak_words)
+        print("OK   changelog of %s: %d version(s), the one that goes out included; no client name, no piece of a secret" % (slug, cl_text.count("<changelog>")))
     if a.dry_run:
         print("DRY-RUN: nothing created. Without --dry-run: Release %s, then %s.xml -> %s" % (tag, slug, version))
         return 0

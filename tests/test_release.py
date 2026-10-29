@@ -79,7 +79,10 @@ class T(unittest.TestCase):
         self.md = os.path.join(self.td, "CHANGELOG.md")
         with open(self.md, "w", encoding="utf-8") as h:
             h.write(MD)
-        self.gh = os.path.join(self.td, "gh")
+        os.makedirs(os.path.join(self.td, "tools"))                    # the list of client names sits next to CHANGELOG.md, as in the product repository
+        with open(os.path.join(self.td, "tools", "leak_words.txt"), "w", encoding="utf-8") as h:
+            h.write("# test names\nmario rossi\n")
+        self.gh =os.path.join(self.td, "gh")
         os.makedirs(self.gh)
         self.env = dict(os.environ, FAKE_GH_DIR=self.gh, WEBG_GH='"%s" -I "%s"' % (sys.executable, os.path.join(HERE, "fake_gh.py")))
 
@@ -189,6 +192,29 @@ class T(unittest.TestCase):
         self.refuses(self.zip(name="pkg_webgpay-0.3.0.zip", v="0.3.0"), "not newer")
         self.refuses(self.zip(extra={"x.php": "<?php $t='ghp_" + "A" * 30 + "';"}), "looks like a token")
         self.refuses(self.zip(name="other.zip"), "must be named")
+
+    def test_changelog_that_names_a_client_or_carries_a_secret_is_refused(self):
+        def with_text(t):
+            with open(self.md, "w", encoding="utf-8") as h:
+                h.write(MD.replace("& basta.", "& basta. " + t))
+        for t, why in (("Fatto per il sito di Mario Rossi.", "names a client"), ("Vedi mariorossi.it.", "names a client"), ("Per MÀRIO ROSSI.", "names a client"),
+                       ("Salvata: whsec_…AB12.", "characters of a key"), ("Chiave sk_live_51AbCdEf.", "characters of a key"), ("pk_test_...wxyz", "characters of a key"),
+                       ("Token ghp_" + "A" * 30, "characters of a key")):
+            with_text(t)
+            r = self.refuses(self.zip(), why)
+            self.assertNotIn("AB12", r.stdout + r.stderr, "the message never repeats the secret")
+        # the names of the settings and a bare prefix are fine
+        with_text("Le opzioni sk_live e whsec_test, la chiave rk_live_ con i permessi, «Salvata: whsec_… e le ultime quattro lettere».")
+        r = self.run_release(self.zip(), "--dry-run")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("no client name", r.stdout)
+        # without the list of names the changelog does not go out
+        os.remove(os.path.join(self.td, "tools", "leak_words.txt"))
+        self.refuses(self.zip(), "list of client names is not there")
+        w = os.path.join(self.td, "words.txt")
+        with open(w, "w", encoding="utf-8") as h:
+            h.write("# only comments\n")
+        self.refuses(self.zip(), "is empty", "--leak-words", w)
 
     def test_existing_release_is_never_overwritten(self):
         os.makedirs(os.path.join(self.gh, "v0.2.2"))

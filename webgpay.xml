@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Update server of the paid package WebG Pay. Written by tools/release.py at every release: do not edit the version, the sha256 or the
-     address by hand. The download address is the key-checking distributor (see docs/CANALE.md): Joomla appends ?key=<download key>.
+<!-- Update server of WebG Pay, free: the download asks for no key. Written by tools/release.py at every release (published with its free option): do not edit the
+     version, the sha256 or the address by hand. The download address is the WebG distributor (see docs/CANALE.md), which serves this product without a key.
      Version 0.0.0 = no release published yet (a site never offers it as an update). -->
 <updates>
     <update>
         <name>WebG Pay</name>
-        <description>WebG Pay package (component, public endpoints plugin, scheduled task, privacy plugin, button module, WebG Automations connector).</description>
+        <description>WebG Pay, free: course payments with Stripe for Joomla and YOOtheme Pro (component, public endpoints plugin, scheduled task, privacy plugin, system plugin with the Course element).</description>
         <element>pkg_webgpay</element>
         <type>package</type>
         <client>site</client>
